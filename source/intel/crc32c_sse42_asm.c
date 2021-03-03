@@ -109,11 +109,11 @@ static inline uint32_t s_crc32c_sse42_clmul_256(const uint8_t *input, uint32_t c
                  FOLD_K1K2(256, $0x1b3d8f29, $0x39d3b296) /* Magic Constants used to fold crc stripes into ecx */
 
                  /* output registers
-                  [crc] is an input and and output so it is marked read/write (i.e. "+c")*/
-                 : "+c"(crc)
+                  [crc] is an input and and output so it is marked read/write (i.e. "+g")*/
+                 : "+g"(crc)
 
                  /* input registers */
-                 : [crc] "c"(crc), [in] "d"(input)
+                 : [ crc ] "c"(crc), [ in ] "d"(input)
 
                  /* additional clobbered registers */
                  : "%r8", "%r9", "%r11", "%r10", "%xmm1", "%xmm2", "%xmm3", "%xmm4", "cc");
@@ -196,14 +196,14 @@ static inline uint32_t s_crc32c_sse42_clmul_1024(const uint8_t *input, uint32_t 
             $0x8f158014) /* Magic Constants used to fold crc stripes into ecx
 
                             output registers
-                            [crc] is an input and and output so it is marked read/write (i.e. "+c")
+                            [crc] is an input and and output so it is marked read/write (i.e. "+g")
                             we clobber the register for [input] (via add instruction) so we must also
-                            tag it read/write (i.e. "+d") in the list of outputs to tell gcc about the clobber */
-        : "+c"(crc), "+d"(input)
+                            tag it read/write (i.e. "+g") in the list of outputs to tell gcc about the clobber */
+        : "+g"(crc), "+g"(input)
 
         /* input registers */
         /* the numeric values match the position of the output registers */
-        : [crc] "c"(crc), [in] "d"(input)
+        : [ crc ] "c"(crc), [ in ] "d"(input)
 
         /* additional clobbered registers */
         /* "cc" is the flags - we add and sub, so the flags are also clobbered */
@@ -276,14 +276,14 @@ static inline uint32_t s_crc32c_sse42_clmul_3072(const uint8_t *input, uint32_t 
             $0x170076fa) /* Magic Constants used to fold crc stripes into ecx
 
                             output registers
-                            [crc] is an input and and output so it is marked read/write (i.e. "+c")
+                            [crc] is an input and and output so it is marked read/write (i.e. "+g")
                             we clobber the register for [input] (via add instruction) so we must also
-                            tag it read/write (i.e. "+d") in the list of outputs to tell gcc about the clobber*/
-        : "+c"(crc), "+d"(input)
+                            tag it read/write (i.e. "+g") in the list of outputs to tell gcc about the clobber*/
+        : "+g"(crc), "+g"(input)
 
         /* input registers
            the numeric values match the position of the output registers */
-        : [crc] "c"(crc), [in] "d"(input)
+        : [ crc ] "c"(crc), [ in ] "d"(input)
 
         /* additional clobbered registers
           "cc" is the flags - we add and sub, so the flags are also clobbered */
@@ -317,7 +317,7 @@ uint32_t aws_checksums_crc32c_hw(const uint8_t *input, int length, uint32_t prev
     /* For small input, forget about alignment checks - simply compute the CRC32c one byte at a time */
     if (UNLIKELY(length < 8)) {
         while (length-- > 0) {
-            asm("loop_small_%=: CRC32B (%[in]), %[crc]" : "+c"(crc) : [crc] "c"(crc), [in] "r"(input));
+            asm("loop_small_%=: CRC32B (%[in]), %[crc]" : "+g"(crc) : [ crc ] "c"(crc), [ in ] "r"(input));
             input++;
         }
         return ~crc;
@@ -334,7 +334,7 @@ uint32_t aws_checksums_crc32c_hw(const uint8_t *input, int length, uint32_t prev
 
     /* spin through the leading unaligned input bytes (if any) one-by-one */
     while (leading-- > 0) {
-        asm("loop_leading_%=: CRC32B (%[in]), %[crc]" : "+c"(crc) : [crc] "c"(crc), [in] "r"(input));
+        asm("loop_leading_%=: CRC32B (%[in]), %[crc]" : "+g"(crc) : [ crc ] "c"(crc), [ in ] "r"(input));
         input++;
     }
 
@@ -363,15 +363,15 @@ uint32_t aws_checksums_crc32c_hw(const uint8_t *input, int length, uint32_t prev
 
     /* Spin through remaining (aligned) 8-byte chunks using the CRC32Q quad word instruction */
     while (LIKELY(length >= 8)) {
-        /* Hardcoding %rcx register (i.e. "+c") to allow use of qword instruction */
-        asm volatile("loop_8_%=: CRC32Q (%[in]), %%rcx" : "+c"(crc) : [crc] "c"(crc), [in] "r"(input));
+        /* Hardcoding %rcx register (i.e. "+g") to allow use of qword instruction */
+        asm volatile("loop_8_%=: CRC32Q (%[in]), %%rcx" : "+g"(crc) : [ crc ] "c"(crc), [ in ] "r"(input));
         input += 8;
         length -= 8;
     }
 
     /* Finish up with any trailing bytes using the CRC32B single byte instruction one-by-one */
     while (length-- > 0) {
-        asm volatile("loop_trailing_%=: CRC32B (%[in]), %[crc]" : "+c"(crc) : [crc] "c"(crc), [in] "r"(input));
+        asm volatile("loop_trailing_%=: CRC32B (%[in]), %[crc]" : "+g"(crc) : [ crc ] "c"(crc), [ in ] "r"(input));
         input++;
     }
 
